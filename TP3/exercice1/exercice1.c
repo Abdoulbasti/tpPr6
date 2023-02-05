@@ -161,8 +161,5 @@ int main()
         {
             close(r3);
         }
-
     }
 } 
-   
-   
