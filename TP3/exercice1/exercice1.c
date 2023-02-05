@@ -10,28 +10,51 @@
 #include <sys/socket.h>
 #include <string.h>
 
-#define MAX_SIZE 1000 
+#define MAX_SIZE 1000
+#define MAX_CLIENT 2
+
+/*
+Les étapes de création d'un serveur : 
+    1. socket sockaddr_in 
+    2. bind 
+    3. listen
+    4. accept
+    5. read/write
+    6. close
+*/
 
 
+//Serveur avec un unique client qui se connecte
+/*
 int main() 
 {
-
     int commucationType = socket(PF_INET, SOCK_STREAM, 0);
-    struct sockaddr_in6 serveurInformations;
-    memset(&serveurInformations, 0, sizeof(serveurInformations));
-    serveurInformations.sin6_family = AF_INET;
-    serveurInformations.sin6_port = htons(4242);
-    //Lampe adresse : 192.168.70.237
-    //Localhost : 127.0.1.1, ::1
+    struct sockaddr_in clientInformations;
+    memset(&clientInformations, 0, sizeof(clientInformations));
+    clientInformations.sin_family = AF_INET;
+    clientInformations.sin_port = htons(2020);
+    clientInformations.sin_addr.s_addr=htonl(INADDR_ANY); // Pour accepter n'importe quelle machines client
+    char nomFonction[10];
+    int r1 = bind(commucationType, (struct sockaddr *)&clientInformations,
+                sizeof(clientInformations));
+    if(r1 == -1) 
+    {
+        strcpy(nomFonction, "bind ");
+        goto endProgram;
+    }
+    
+    int r2=listen(commucationType, MAX_CLIENT);
+    if(r2 == -1) {strcpy(nomFonction, "listen ");    goto endProgram;}
 
-    char hostAdress[] = "::1"; //Adresse ipv6
+    socklen_t sockLenght = sizeof(clientInformations);
 
-    int r1 = inet_pton(AF_INET6, hostAdress, &serveurInformations.sin6_addr);
-    if(r1 == -1) {goto endProgram;}
-
-    int r2 = connect(commucationType, (struct sockaddr*) &serveurInformations, sizeof(serveurInformations));
-    if(r2 == -1) {goto endProgram;}
-    printf("Connecté\n");
+    int r3 = accept(commucationType, (struct sockaddr *) &clientInformations,
+    &sockLenght);
+    if(r3 == -1) 
+    {
+        strcpy(nomFonction, "accept ");
+        goto endProgram;
+    }
 
     while(1)
     {
@@ -40,19 +63,104 @@ int main()
         memset(buffSend, 0, sizeof(buffSend));
         memset(buffRecev, 0, sizeof(buffRecev));
 
-        int r1 = read(0, buffSend,MAX_SIZE);
-        if(r1 == -1) {goto endProgram;}
+        int r4 = read(r3, buffRecev, MAX_SIZE);
+        if(r4 == -1) 
+        {
+            strcpy(nomFonction, "read ");
+            goto endProgram;
+        }
 
-
-        int r2 = write(commucationType , buffSend, MAX_SIZE);
-        if(r2 == -1) {goto endProgram;}
-        int r3 = read(commucationType, buffRecev, MAX_SIZE);
-        if(r3 == -1){goto endProgram;}
-
-        int r4 = write(1, buffRecev, MAX_SIZE);
-        if(r4 == -1){goto endProgram;}
+        int r5 = write(r3 , buffRecev, MAX_SIZE);
+        if(r5 == -1) 
+        {
+            strcpy(nomFonction, "write ");
+            goto endProgram;
+        }
     }
     endProgram :
+        write(1, nomFonction, strlen(nomFonction));
         perror("error ");
-        close(commucationType);
+        close(r3);
+}*/
+
+
+//Un serveur avec plusieurs client qui se connecte.
+
+int main() 
+{
+    int commucationType = socket(PF_INET, SOCK_STREAM, 0);
+    struct sockaddr_in clientInformations;
+    memset(&clientInformations, 0, sizeof(clientInformations));
+    clientInformations.sin_family = AF_INET;
+    clientInformations.sin_port = htons(9999);
+    clientInformations.sin_addr.s_addr=htonl(INADDR_ANY); // Pour accepter n'importe quelle machines client
+    char nomFonction[10];
+    int r1 = bind(commucationType, (struct sockaddr *)&clientInformations,
+                sizeof(clientInformations));
+    if(r1 == -1) 
+    {
+        strcpy(nomFonction, "bind ");
+        goto endProgram;
+    }
+
+
+
+    int r2=listen(commucationType, MAX_CLIENT);
+    if(r2 == -1) {strcpy(nomFonction, "listen ");    goto endProgram;}
+    socklen_t sockLenght = sizeof(clientInformations);
+
+
+    while(1)
+    {
+        int r3 = accept(commucationType, (struct sockaddr *) &clientInformations,
+        &sockLenght);
+        if(r3 == -1) 
+        {
+            strcpy(nomFonction, "accept ");
+            goto endProgram;
+        }
+
+        int retourFork = fork();
+        if(retourFork == -1) {strcpy(nomFonction, "fork ");     goto endProgram;}
+        else if(retourFork == 0)
+        {
+            close(commucationType);
+                                    
+            while(1)
+            {
+                char buffSend[MAX_SIZE];
+                char buffRecev[MAX_SIZE];
+                memset(buffSend, 0, sizeof(buffSend));
+                memset(buffRecev, 0, sizeof(buffRecev));
+
+                int r4 = read(r3, buffRecev, MAX_SIZE);
+                if(r4 == -1) 
+                {
+                    strcpy(nomFonction, "read ");
+                    goto endProgram;
+                }
+
+                int r5 = write(r3 , buffRecev, MAX_SIZE);
+                if(r5 == -1) 
+                {
+                    strcpy(nomFonction, "write ");
+                    goto endProgram;
+                }
+            }
+            endProgram :
+                write(1, nomFonction, strlen(nomFonction));
+                perror("error ");
+                close(r3);
+                exit(0);
+
+
+            close(r3);
+            exit(0);
+        }
+        else 
+        {
+            close(r3);
+        }
+
+    }
 }

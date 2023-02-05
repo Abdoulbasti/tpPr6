@@ -73,7 +73,8 @@ int main()
     int r1 = inet_pton(AF_INET6, hostAdress, &serveurInformations.sin6_addr);
     if(r1 == -1) {goto endProgram;}
 
-    int r2 = connect(commucationType, (struct sockaddr*) &serveurInformations, sizeof(serveurInformations));
+    int r2 = connect(commucationType, (struct sockaddr*) &serveurInformations, 
+    sizeof(serveurInformations));
     if(r2 == -1) {goto endProgram;}
     printf("Connecté\n");
 
