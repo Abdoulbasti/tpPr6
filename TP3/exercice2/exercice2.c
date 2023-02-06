@@ -88,7 +88,7 @@ int main()
  int aleatoire()
  {
     srand(time(NULL));
-    return rand() % 65535;
+    return rand() % 100;
  }
 
 int main() 
@@ -97,7 +97,7 @@ int main()
     struct sockaddr_in clientInformations;
     memset(&clientInformations, 0, sizeof(clientInformations));
     clientInformations.sin_family = AF_INET;
-    clientInformations.sin_port = htons(7979);
+    clientInformations.sin_port = htons(7159);
     clientInformations.sin_addr.s_addr=htonl(INADDR_ANY); // Pour accepter n'importe quelle machines client
     char nomFonction[10];
     int r1 = bind(commucationType, (struct sockaddr *)&clientInformations,
@@ -110,9 +110,10 @@ int main()
     if(r2 == -1) { perror("listen ");}
     socklen_t sockLenght = sizeof(clientInformations);
 
-    int r = 20;
     while(1)
     {
+        int r = 20;
+        int maxOccurrent = 20;
         int r3 = accept(commucationType, (struct sockaddr *) &clientInformations,
         &sockLenght);
         if(r3 == -1) 
@@ -131,48 +132,51 @@ int main()
 
             //PROTOCOLE DE COMMUNICATION....
             int n = aleatoire();
-            for(int i =0; i<r; i++)
+            for(int i =0; i<maxOccurrent; i++)
             {
                 char buff[taille];
                 int charReaded = read(r3, buff, taille);
                 if(charReaded == -1) perror(" read ");
                 int k = atoi(buff);
 
-
-                if(k < n)
+                if(r != 0)
                 {
-                    r--;
-                    memset(stockerProtocole, 0, 15);
-                    sprintf(stockerProtocole, "PLUS %d\n", r);
-                    write(1, stockerProtocole, taille);
-                    continue;
+                    if(k < n)
+                    {
+                        r--;
+                        memset(stockerProtocole, 0, 15);
+                        sprintf(stockerProtocole, "PLUS %d\n", r);
+                        write(1, stockerProtocole, taille);
+                    }
+                    if(k > n)
+                    {
+                        r--;
+                        memset(stockerProtocole, 0, 15);
+                        sprintf(stockerProtocole, "MOINS %d\n", r);
+                        write(1, stockerProtocole, taille);
+                    }
+                    if(k==n) 
+                    {
+                        write(1, "GAGNE \n", taille);
+                        break;                            
+                    }
                 }
-                else if(k > n)
+                else 
                 {
-                    r--;
-                    memset(stockerProtocole, 0, 15);
-                    sprintf(stockerProtocole, "MOINS %d\n", r);
-                    write(1, stockerProtocole, taille);
-                    continue;
-                }
-                else if (k == n)
-                {
-                    r--;
-                    write(1, "GAGNE \n", taille);
-                    close(r3);
-                    exit(0);
-                }
-                if( k != n && r == 0)
-                {
-                    write(1, "PERDU \n", taille);
-                    close(r3);
-                    exit(0);
+                    if(k != n)
+                    {
+                        printf("test\n");
+                        write(1, "PERDU \n", taille);
+                        break;
+                    }
                 }
             }
+            close(r3);
+            exit(0);
         }
         else 
         {
             close(r3);
         }
     }
-} 
+}
