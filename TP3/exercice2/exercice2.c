@@ -87,8 +87,9 @@ int main()
 /*Nombre aleatoire entre 0 et 65535*/
  int aleatoire()
  {
-    srand(time(NULL));
-    return rand() % 100;
+    //srand(time(NULL));
+    //return rand() % 50;
+    return 90;
  }
 
 int main() 
@@ -97,86 +98,64 @@ int main()
     struct sockaddr_in clientInformations;
     memset(&clientInformations, 0, sizeof(clientInformations));
     clientInformations.sin_family = AF_INET;
-    clientInformations.sin_port = htons(7159);
+    clientInformations.sin_port = htons(3356);
     clientInformations.sin_addr.s_addr=htonl(INADDR_ANY); // Pour accepter n'importe quelle machines client
     char nomFonction[10];
     int r1 = bind(commucationType, (struct sockaddr *)&clientInformations,
                 sizeof(clientInformations));
     if(r1 == -1) perror("bind ");
 
-
-
     int r2=listen(commucationType, MAX_CLIENT);
     if(r2 == -1) { perror("listen ");}
     socklen_t sockLenght = sizeof(clientInformations);
 
-    while(1)
+    int r = 20;
+    int maxOccurrent = 20;
+    int r3 = accept(commucationType, (struct sockaddr *) &clientInformations,
+    &sockLenght);
+    if(r3 == -1) 
     {
-        int r = 20;
-        int maxOccurrent = 20;
-        int r3 = accept(commucationType, (struct sockaddr *) &clientInformations,
-        &sockLenght);
-        if(r3 == -1) 
+        strcpy(nomFonction, "accept ");
+        perror("accept ");
+    }
+    int taille = 10;
+        //PROTOCOLE DE COMMUNICATION....
+    int n = aleatoire();
+    for(int i =0; i<maxOccurrent; i++)
+    {
+        char buff[taille];
+        memset(buff, 0, taille);
+        int charReaded = read(r3, buff, taille);
+        if(charReaded == -1) perror(" read ");
+        int k = atoi(buff);
+
+        if(k > n)
         {
-            strcpy(nomFonction, "accept ");
-            perror("accept ");
+            r--;
+            char stockerProtocole[15];
+            memset(stockerProtocole, 0, 15);            
+            sprintf(stockerProtocole, "PLUS %d\n", r);  
+            write(1, stockerProtocole, strlen(stockerProtocole)); 
         }
-
-        char stockerProtocole[15];
-        int retourFork = fork();
-        int taille = 10;
-        if(retourFork == -1) perror(" fork ");
-        else if(retourFork == 0)
+        if(k < n)
         {
-            close(commucationType);
-
-            //PROTOCOLE DE COMMUNICATION....
-            int n = aleatoire();
-            for(int i =0; i<maxOccurrent; i++)
-            {
-                char buff[taille];
-                int charReaded = read(r3, buff, taille);
-                if(charReaded == -1) perror(" read ");
-                int k = atoi(buff);
-
-                if(r != 0)
-                {
-                    if(k < n)
-                    {
-                        r--;
-                        memset(stockerProtocole, 0, 15);
-                        sprintf(stockerProtocole, "PLUS %d\n", r);
-                        write(1, stockerProtocole, taille);
-                    }
-                    if(k > n)
-                    {
-                        r--;
-                        memset(stockerProtocole, 0, 15);
-                        sprintf(stockerProtocole, "MOINS %d\n", r);
-                        write(1, stockerProtocole, taille);
-                    }
-                    if(k==n) 
-                    {
-                        write(1, "GAGNE \n", taille);
-                        break;                            
-                    }
-                }
-                else 
-                {
-                    if(k != n)
-                    {
-                        printf("test\n");
-                        write(1, "PERDU \n", taille);
-                        break;
-                    }
-                }
-            }
-            close(r3);
-            exit(0);
+            r--;
+            char stockerProtocole[15];
+            memset(stockerProtocole, 0, 15);
+            sprintf(stockerProtocole, "MOINS %d\n", r);
+            write(1, stockerProtocole, strlen(stockerProtocole));
         }
-        else 
+        if(k == n)
         {
-            close(r3);
+            write(1, "GAGNE \n", strlen("GAGNE \n"));
+            break;         
+        }
+        if (r == 0 && k != n)
+        {
+            write(1, "PERDU \n", taille);
+            break;
         }
     }
+    close(r3);
+    exit(0);
 }
