@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <string.h>
+#include <pthread.h>
 
 #define MAX_SIZE 1000
 #define MAX_CLIENT 2
@@ -24,47 +25,28 @@ Les étapes de création d'un serveur :
 */
 
 /*Nombre aleatoire entre 0 et 65535*/
+
+ int aleatoire();
+ void* protocole(void* s);
+
  int aleatoire()
  {
-    //srand(time(NULL));
-    //return rand() % 50;
-    return 90;
+    srand(time(NULL));
+    return rand() % 100;
  }
 
-int main() 
-{
-    int commucationType = socket(PF_INET, SOCK_STREAM, 0);
-    struct sockaddr_in clientInformations;
-    memset(&clientInformations, 0, sizeof(clientInformations));
-    clientInformations.sin_family = AF_INET;
-    clientInformations.sin_port = htons(3356);
-    clientInformations.sin_addr.s_addr=htonl(INADDR_ANY); // Pour accepter n'importe quelle machines client
-    char nomFonction[10];
-    int r1 = bind(commucationType, (struct sockaddr *)&clientInformations,
-                sizeof(clientInformations));
-    if(r1 == -1) perror("bind ");
-
-    int r2=listen(commucationType, MAX_CLIENT);
-    if(r2 == -1) { perror("listen ");}
-    socklen_t sockLenght = sizeof(clientInformations);
-
+ void* protocole(void* s)
+ {
+    int sockClient = *((int *)s);
     int r = 20;
     int maxOccurrent = 20;
-    int r3 = accept(commucationType, (struct sockaddr *) &clientInformations,
-    &sockLenght);
-    if(r3 == -1) 
-    {
-        strcpy(nomFonction, "accept ");
-        perror("accept ");
-    }
     int taille = 10;
-        //PROTOCOLE DE COMMUNICATION....
     int n = aleatoire();
     for(int i =0; i<maxOccurrent; i++)
     {
         char buff[taille];
         memset(buff, 0, taille);
-        int charReaded = read(r3, buff, taille);
+        int charReaded = read(sockClient, buff, taille);
         if(charReaded == -1) perror(" read ");
         int k = atoi(buff);
 
@@ -95,6 +77,43 @@ int main()
             break;
         }
     }
-    close(r3);
-    exit(0);
+    close(sockClient);
+    return NULL;
+ }
+
+int main() 
+{
+    int commucationType = socket(PF_INET, SOCK_STREAM, 0);
+    struct sockaddr_in clientInformations;
+    memset(&clientInformations, 0, sizeof(clientInformations));
+    clientInformations.sin_family = AF_INET;
+    clientInformations.sin_port = htons(3356);
+    clientInformations.sin_addr.s_addr=htonl(INADDR_ANY); // Pour accepter n'importe quelle machines client
+    char nomFonction[10];
+    int r1 = bind(commucationType, (struct sockaddr *)&clientInformations,
+                sizeof(clientInformations));
+    if(r1 == -1) perror("bind ");
+
+    int r2=listen(commucationType, MAX_CLIENT);
+    if(r2 == -1) { perror("listen ");}
+    socklen_t sockLenght = sizeof(clientInformations);
+
+
+    //PROTOCOLE DE COMMUNICATION....
+    while(1)
+    {
+        int r3 = accept(commucationType, (struct sockaddr *) &clientInformations,
+        &sockLenght);
+        if(r3 == -1) 
+        {
+            strcpy(nomFonction, "accept ");
+            perror("accept ");
+        }
+        pthread_t thread;
+        int threadReturn = pthread_create(&thread, NULL, protocole, &r3);
+        if(threadReturn != 0)   perror("pthread_create ");
+
+    }
+
+    return 0;
 }
